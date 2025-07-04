@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+import argparse
+from pathlib import Path
+import subprocess
+from typing import List
+
+def run(args):
+    if args.experiment.startswith('base'):
+        build_base(args.experiment)
+    else:
+        for base in find_base(f'{args.experiment}/Dockerfile'):
+            print(f'Building base: {base}')
+            build_base(base)
+
+        print(f'Building experiment: {args.experiment}')
+        build_experiment(args.experiment)
+
+def build_base(base):
+    # Build base image in root folder context.
+    subprocess.run(['docker', 'build', '..', '-f', f'{base}/Dockerfile', '-t', f'frameshift_{base}'])
+
+def build_experiment(experiment):
+    # Build experiment in subfolder root.
+    subprocess.run(['docker', 'build', f'./{experiment}', '-f', f'{experiment}/Dockerfile', '-t', f'frameshift_{experiment}'])
+
+def find_base(dockerfile):
+    '''
+    Find all base images in the dockerfile that start with "frameshift_".
+    '''
+    data = open(dockerfile).read()
+    base = [x.strip().split('FROM')[1].strip() for x in data.split('\n') if x.strip().startswith('FROM')]
+    return [x.split('frameshift_')[1] for x in base if x.startswith('frameshift_')]
+
+def get_choices() -> List[str]:
+    return [x.stem for x in Path('.').iterdir() if x.is_dir()]
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('experiment', choices=get_choices())
+    args = parser.parse_args()
+    run(args)
+
+if __name__ == '__main__':
+    main()
