@@ -2,7 +2,6 @@ use libafl_bolts::impl_serdeany;
 use serde::{Deserialize, Serialize};
 
 
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SearchMetadata {
     pub num_searched: usize,
