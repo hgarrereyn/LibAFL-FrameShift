@@ -1,4 +1,4 @@
 [submodule "third_party/LibAFL"]
 	path = third_party/LibAFL
-	url = git@github.com:hgarrereyn/LibAFL.git
+	url = https://github.com/hgarrereyn/LibAFL.git
 	branch = master
