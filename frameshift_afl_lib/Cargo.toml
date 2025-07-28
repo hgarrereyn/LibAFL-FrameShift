@@ -6,6 +6,7 @@ edition = "2021"
 [features]
 default = ["std"]
 std = []
+use_counters = ["frameshift_afl/use_counters"]
 
 [profile.release]
 lto = true

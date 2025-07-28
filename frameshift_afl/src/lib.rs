@@ -1,7 +1,7 @@
 //! A singlethreaded libfuzzer-like fuzzer that can auto-restart.
 use components::search_stage::SearchStageArgs;
 use libafl::prelude::{MapObserver, StdMapObserver};
-use libafl_targets::{libfuzzer_initialize, libfuzzer_test_one_input, std_edges_map_observer};
+use libafl_targets::{extra_counters, libfuzzer_initialize, libfuzzer_test_one_input, std_edges_map_observer};
 use libafl_bolts::{AsIter, AsSlice};
 use mimalloc::MiMalloc;
 #[global_allocator]
@@ -86,7 +86,24 @@ pub struct Options {
 #[no_mangle]
 pub extern "C" fn libafl_main() {
     let res = Cli::parse();
-    let edges = unsafe { std_edges_map_observer("edges") };
+    
+    let edges = {
+        #[cfg(feature = "use_counters")]
+        {
+            let edges = unsafe { extra_counters() };
+            let obs = StdMapObserver::from_mut_slice(
+                "edges",
+                edges.into_iter().next().unwrap(),
+            );
+            obs
+        }
+
+        #[cfg(not(feature = "use_counters"))]
+        {
+            let edges = unsafe { std_edges_map_observer("edges") };
+            edges
+        }
+    };
 
     let args: Vec<String> = env::args().collect();
     if libfuzzer_initialize(&args) == -1 {

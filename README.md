@@ -40,3 +40,27 @@ By default, this will run in FrameShift mode. The following additional options a
 ## Library Usage
 
 There is also a simple library interface in [frameshift_afl_lib](frameshift_afl_lib/src/lib.rs) which describes how to use LibAFL as a drop in replacement for libFuzzer backends (e.g. for use with Atheris or cargo-fuzz).
+
+## Experiments
+
+Several Dockerized experiments are provided in the [experiments](experiments) directory to demonstrate how to use FrameShift in various modes. To build and run an experiment, run `./run <experiment_name>` in the experiment directory. This will build the docker image and give you a shell in the container to run the fuzzer.
+
+E.g.
+```bash
+cd experiments
+./run libpng
+
+# (inside the container:)
+./libpng_read_fuzzer -i input/ -o output/ --verbose-search
+```
+
+There is also an example seed file provided for each experiment, you can analyze it by running `<target> -a <seed_file>`.
+
+#### Available experiments
+
+| Experiment | Language | Target |
+| ---------- | -------- | ------ |
+| libpng | C | `./libpng_read_fuzzer ...` |
+| bloaty | C | `./fuzz_target ...` |
+| image-png | Rust | `./decode ...` |
+| pyasn1 | Python | `python3 fuzz_asn1.py ...` |

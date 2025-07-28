@@ -7,24 +7,12 @@ edition = "2021"
 [features]
 default = ["std"]
 std = []
-
-# [profile.release]
-# lto = true
-# codegen-units = 1
-# opt-level = 1
-# debug = true
-# overflow-checks = true
+use_counters = []
 
 [profile.release]
 opt-level = 3
 overflow-checks = true
 lto = true
-
-# [profile.release]
-# opt-level = 0
-# overflow-checks = true
-# lto = true
-# debug = true
 
 [dependencies]
 libafl = { path = "../third_party/LibAFL/libafl" }
