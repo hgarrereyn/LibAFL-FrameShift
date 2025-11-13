@@ -191,6 +191,18 @@ where
             phantom: PhantomData,
         })?;
 
+        // Average analysis time per test (ms)
+        let avg_analysis_ms = if search_tests > 0 {
+            target_time_ms / (search_tests as u64)
+        } else {
+            0
+        };
+        manager.fire(state, Event::UpdateUserStats {
+            name: Cow::Borrowed("avg_analysis_ms"),
+            value: UserStats::new(UserStatsValue::Number(avg_analysis_ms), AggregatorOps::None),
+            phantom: PhantomData,
+        })?;
+
         Ok(())
     }
 }
