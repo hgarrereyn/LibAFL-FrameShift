@@ -41,6 +41,9 @@ pub struct Options {
     #[arg(short, long)]
     pub analyze: Option<String>,
 
+    #[arg(short, long)]
+    pub execute: Option<String>,
+
     // Something like start:end:<hexstring>
     #[arg(short, long)]
     pub mutate_splice: Option<String>,
@@ -117,7 +120,9 @@ pub fn entrypoint<F>(res: Options, fuzz_fn: &mut F, obs: StdMapObserver<u8,false
 where 
     F: Fn(&[u8]) -> i32,
 {
-    if res.tpm_experiment.is_some() {
+    if res.execute.is_some() {
+        execute(&PathBuf::from(res.execute.unwrap()), fuzz_fn);
+    } else if res.tpm_experiment.is_some() {
         tpm_experiment(res, fuzz_fn, obs);
     } else if res.analyze.is_some() {
         analyze(res, fuzz_fn, obs);
@@ -126,6 +131,15 @@ where
     } else {
         println!("Must specify (input and output) or (analyze) options");
     }
+}
+
+pub fn execute<F>(path: &PathBuf, fuzz_fn: &mut F)
+where 
+    F: Fn(&[u8]) -> i32,
+{
+    println!("Executing {:?}", path);
+    let raw = fs::read(path).expect("Could not read testcase");
+    fuzz_fn(&raw);
 }
 
 pub fn fuzz<F>(res: Options, fuzz_fn: &mut F, obs: StdMapObserver<u8,false>,) 
