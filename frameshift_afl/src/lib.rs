@@ -172,6 +172,7 @@ where
         max_iters: res.search_max_iters,
         loss_threshold: res.search_loss_threshold,
         recover_threshold: res.search_recover_threshold,
+        ..Default::default()
     };
 
     match !res.disable_frameshift {
@@ -212,6 +213,7 @@ where
         max_iters: res.search_max_iters,
         loss_threshold: res.search_loss_threshold,
         recover_threshold: res.search_recover_threshold,
+        max_ms_per_input: 100000, // 100 seconds.
     };
 
     if res.stress_analyze > 0 {
