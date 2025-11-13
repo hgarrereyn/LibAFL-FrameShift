@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashSet};
+use std::{cell::RefCell, collections::HashSet, time::Instant};
 
 use colored::Colorize;
 
@@ -14,6 +14,9 @@ pub struct SearchOptions {
     // Thresholds.
     pub loss_threshold: f64,
     pub recover_threshold: f64,
+
+    // Timeout.
+    pub max_ms_per_input: u64,
 }
 
 impl SearchOptions {
@@ -33,6 +36,7 @@ impl Default for SearchOptions {
             max_iters: 10,
             loss_threshold: 0.05,
             recover_threshold: 0.2,
+            max_ms_per_input: 2000, // 2 seconds.
         }
     }
 }
@@ -43,7 +47,8 @@ pub struct SearchContext<'o,O> {
     pub focus_indices: Vec<usize>,
     pub loss_threshold: usize,
     pub test_count: RefCell<usize>,
-    pub target_test_ms: RefCell<u64>
+    pub target_test_ms: RefCell<u64>,
+    pub start_time: Instant,
 }
 
 pub struct SearchResult {
@@ -94,22 +99,22 @@ where
             focus_indices,
             loss_threshold,
             test_count: RefCell::new(0),
-            target_test_ms: RefCell::new(0)
+            target_test_ms: RefCell::new(0),
+            start_time: Instant::now(),
         }
     }
 
     pub fn search(testcase: &Structured, oracle: &'o mut O, options: SearchOptions) -> SearchResult {
-        let search = Self::new(testcase, oracle, options);
+        let mut search = Self::new(testcase, oracle, options);
         
         let mut input = testcase.clone();
 
         search.log(&format!("Starting search: {:?}", input));
 
-        let start = std::time::Instant::now();
-
+        search.start_time = Instant::now();
         search.find_relations(&mut input);
 
-        let total_test_ms = start.elapsed().as_millis() as u64;
+        let total_test_ms = search.start_time.elapsed().as_millis() as u64;
         
         let test_count = *search.test_count.borrow();
         let target_test_ms = *search.target_test_ms.borrow();
@@ -137,12 +142,20 @@ where
 
         let mut iter = 0;
         while iter < self.options.max_iters {
+            if self.time_exceeded() {
+                self.log("Time budget exceeded; stopping search.");
+                break;
+            }
             iter += 1;
             self.log(&format!("Iteration {}", iter));
 
             let found = self.find_relations_inner(input);
             if !found {
                 // Exit if no relations were found this iteration.
+                break;
+            }
+            if self.time_exceeded() {
+                self.log("Time budget exceeded during iteration; stopping search.");
                 break;
             }
         }
@@ -188,7 +201,13 @@ where
 
         // Iterate over field placement.
         for i in 0..seed_data.len() {
+            if self.time_exceeded() {
+                return false;
+            }
             'inner: for (size, le) in rel_types.iter() {
+                if self.time_exceeded() {
+                    return false;
+                }
                 if i + size > seed_data.len() {
                     continue 'inner;
                 }
@@ -300,6 +319,9 @@ where
                         // If we found a match here, bail early, otherwise search the rest of the inflection points.
                         if potential.insert == usize::MAX {
                             for anchor in inflection_points.iter() {
+                                if self.time_exceeded() {
+                                    return false;
+                                }
                                 self.check_anchor(input, i, *anchor, shift_amount, &mut test_buffer, &seed_data, &mut lost_indices, &mut curr_recover, &mut potential, &mut anchor_visited_cache, &mut blocked_points);
                             }
                         }
@@ -329,6 +351,11 @@ where
         }
 
         found
+    }
+
+    #[inline]
+    fn time_exceeded(&self) -> bool {
+        self.start_time.elapsed().as_millis() as u64 >= self.options.max_ms_per_input
     }
 
     #[inline]
